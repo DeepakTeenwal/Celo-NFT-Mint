@@ -10,7 +10,7 @@
     "splashBackgroundColor": "#ffff66",
     "webhookUrl": "https://celo-nft-mint.vercel.app/api/webhook",
     "primaryCategory": "art-creativity",
-    "subtitle": "Claim Your Unique Digital Collectible on Celo",
+    "subtitle": "Own a Unique Celo NFT",
     "description": "Mint your exclusive NFT on the Celo blockchain and join a community of collectors",
     "tags": [
       "celonft",
