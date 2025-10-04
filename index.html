@@ -91,6 +91,7 @@
     }
     .quiz-section {
       margin: 20px 0;
+      min-height: 250px;
     }
     .question {
       background: #f8f9fa;
@@ -98,11 +99,69 @@
       border-radius: 16px;
       margin-bottom: 16px;
       text-align: left;
+      animation: fadeIn 0.4s ease-in;
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
     .question h3 {
       color: #333;
       font-size: 16px;
       margin-bottom: 12px;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.3s ease;
+      border-radius: 10px;
+    }
+    .question-counter {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .nav-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 10px 20px;
+      background: #e0e0e0;
+      color: #333;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: #d0d0d0;
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .nav-btn.next {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .nav-btn.next:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
     .options {
       display: flex;
@@ -208,12 +267,22 @@
     <div id="userInfo" class="hidden"></div>
     <div id="addFavoriteBanner" class="hidden"></div>
     
+    <div class="progress-bar">
+      <div id="progressFill" class="progress-fill" style="width: 33.33%"></div>
+    </div>
+    <div id="questionCounter" class="question-counter">Question 1 of 3</div>
+    
     <div id="quizSection" class="quiz-section"></div>
     
-    <button id="connectWalletBtn" class="secondary-btn hidden" style="margin-bottom: 12px;">
+    <div class="nav-buttons">
+      <button id="prevBtn" class="nav-btn" disabled>← Previous</button>
+      <button id="nextBtn" class="nav-btn next">Next →</button>
+    </div>
+    
+    <button id="connectWalletBtn" class="secondary-btn hidden" style="margin-top: 12px;">
       🔗 Connect Wallet
     </button>
-    <button id="submitBtn" class="primary-btn">Submit Quiz</button>
+    <button id="submitBtn" class="primary-btn hidden" style="margin-top: 12px;">Submit Quiz</button>
     <div id="status"></div>
     <div id="walletStatus" class="wallet-status"></div>
   </div>
@@ -269,6 +338,7 @@
     let farcasterContext = null;
     let ethereumProvider = null;
     let isFarcasterContext = false;
+    let currentQuestion = 0;
 
     // Wait for Farcaster SDK to load
     async function initFarcasterSdk() {
@@ -349,35 +419,54 @@
     }
 
     function loadQuiz() {
-      const quizSection = document.getElementById('quizSection');
-      quizSection.innerHTML = '';
+      showQuestion(currentQuestion);
       
-      questions.forEach((q, i) => {
-        const questionDiv = document.createElement('div');
-        questionDiv.className = 'question';
-        
-        let optionsHtml = '<div class="options">';
-        q.options.forEach(opt => {
-          optionsHtml += `
-            <button class="option-btn" data-question="${i}" data-answer="${opt}">
-              ${opt}
-            </button>
-          `;
-        });
-        optionsHtml += '</div>';
-        
-        questionDiv.innerHTML = `
-          <h3>${i + 1}. ${q.q}</h3>
-          ${optionsHtml}
+      // Show connect wallet button if not in Farcaster context
+      if (!isFarcasterContext) {
+        const connectBtn = document.getElementById('connectWalletBtn');
+        connectBtn.classList.remove('hidden');
+      }
+      
+      console.log('Quiz loaded successfully');
+    }
+
+    function showQuestion(index) {
+      const quizSection = document.getElementById('quizSection');
+      const q = questions[index];
+      
+      // Update progress bar
+      const progress = ((index + 1) / questions.length) * 100;
+      document.getElementById('progressFill').style.width = progress + '%';
+      
+      // Update counter
+      document.getElementById('questionCounter').textContent = 
+        `Question ${index + 1} of ${questions.length}`;
+      
+      // Build question HTML
+      let optionsHtml = '<div class="options">';
+      q.options.forEach(opt => {
+        const isSelected = userAnswers[index] === opt;
+        optionsHtml += `
+          <button class="option-btn ${isSelected ? 'selected' : ''}" 
+                  data-question="${index}" 
+                  data-answer="${opt}">
+            ${opt}
+          </button>
         `;
-        
-        quizSection.appendChild(questionDiv);
       });
+      optionsHtml += '</div>';
+      
+      quizSection.innerHTML = `
+        <div class="question">
+          <h3>${index + 1}. ${q.q}</h3>
+          ${optionsHtml}
+        </div>
+      `;
       
       // Add event listeners to options
       document.querySelectorAll('.option-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-          const questionIndex = this.dataset.question;
+          const questionIndex = parseInt(this.dataset.question);
           const answer = this.dataset.answer;
           
           // Remove selected class from siblings
@@ -391,14 +480,42 @@
         });
       });
       
-      // Show connect wallet button if not in Farcaster context
-      if (!isFarcasterContext) {
-        const connectBtn = document.getElementById('connectWalletBtn');
-        connectBtn.classList.remove('hidden');
-        connectBtn.addEventListener('click', connectExternalWallet);
-      }
+      // Update navigation buttons
+      updateNavigationButtons();
+    }
+
+    function updateNavigationButtons() {
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const submitBtn = document.getElementById('submitBtn');
       
-      console.log('Quiz loaded successfully');
+      // Update Previous button
+      prevBtn.disabled = currentQuestion === 0;
+      
+      // Update Next/Submit button
+      if (currentQuestion === questions.length - 1) {
+        // Last question - show submit button, hide next
+        nextBtn.classList.add('hidden');
+        submitBtn.classList.remove('hidden');
+      } else {
+        // Not last question - show next button, hide submit
+        nextBtn.classList.remove('hidden');
+        submitBtn.classList.add('hidden');
+      }
+    }
+
+    function nextQuestion() {
+      if (currentQuestion < questions.length - 1) {
+        currentQuestion++;
+        showQuestion(currentQuestion);
+      }
+    }
+
+    function prevQuestion() {
+      if (currentQuestion > 0) {
+        currentQuestion--;
+        showQuestion(currentQuestion);
+      }
     }
 
     async function checkAnswers() {
@@ -586,6 +703,13 @@
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('submitBtn').addEventListener('click', checkAnswers);
+      document.getElementById('nextBtn').addEventListener('click', nextQuestion);
+      document.getElementById('prevBtn').addEventListener('click', prevQuestion);
+      
+      const connectBtn = document.getElementById('connectWalletBtn');
+      if (connectBtn) {
+        connectBtn.addEventListener('click', connectExternalWallet);
+      }
     });
     
     // Start the app
