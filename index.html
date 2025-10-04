@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Take the Celo Quiz and mint NFTs based on your score! Built on Celo blockchain." />
+  <meta property="og:title" content="Celo Quiz NFT - Farcaster Mini App" />
+  <meta property="og:description" content="Answer questions about Celo and mint NFTs based on your score!" />
+  <meta property="og:image" content="https://celo-nft-mint.vercel.app/preview.png" />
+  <meta property="og:url" content="https://celo-nft-mint.vercel.app" />
   <title>Celo Quiz NFT Mint</title>
+  <link rel="icon" href="https://celo-nft-mint.vercel.app/icon.png" type="image/png" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.0/dist/ethers.umd.min.js"></script>
   <style>
     * {
@@ -48,6 +54,10 @@
       font-size: 28px;
       margin-bottom: 8px;
     }
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+    }
     .user-info {
       display: flex;
       align-items: center;
@@ -89,6 +99,27 @@
       margin-bottom: 12px;
       opacity: 0.95;
     }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.3s ease;
+      border-radius: 10px;
+    }
+    .question-counter {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
     .quiz-section {
       margin: 20px 0;
       min-height: 250px;
@@ -115,53 +146,6 @@
       color: #333;
       font-size: 16px;
       margin-bottom: 12px;
-    }
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: #e0e0e0;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-      transition: width 0.3s ease;
-      border-radius: 10px;
-    }
-    .question-counter {
-      text-align: center;
-      color: #666;
-      font-size: 14px;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-    .nav-buttons {
-      display: flex;
-      gap: 12px;
-      margin-top: 16px;
-    }
-    .nav-btn {
-      flex: 1;
-      padding: 10px 20px;
-      background: #e0e0e0;
-      color: #333;
-    }
-    .nav-btn:hover:not(:disabled) {
-      background: #d0d0d0;
-    }
-    .nav-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    .nav-btn.next {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .nav-btn.next:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
     .options {
       display: flex;
@@ -192,10 +176,36 @@
       color: white;
       border-color: #667eea;
     }
+    .nav-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 10px 20px;
+      background: #e0e0e0;
+      color: #333;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: #d0d0d0;
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .nav-btn.next {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .nav-btn.next:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
     .primary-btn {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      margin-top: 20px;
+      margin-top: 12px;
       width: 100%;
     }
     .primary-btn:hover:not(:disabled) {
@@ -220,6 +230,7 @@
       border-radius: 12px;
       margin-top: 16px;
       font-weight: 500;
+      font-size: 14px;
     }
     .status.success {
       background: #d4edda;
@@ -247,6 +258,7 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin-left: 8px;
+      vertical-align: middle;
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -255,13 +267,24 @@
     .hidden {
       display: none;
     }
+    .footer {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #999;
+    }
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
   <div class="app-container" id="app">
     <div class="header">
       <h1>🎯 Celo Quiz Challenge</h1>
-      <p style="color: #666; font-size: 14px;">Complete the quiz to mint your NFT!</p>
+      <p class="subtitle">Complete the quiz to mint your NFTs!</p>
     </div>
 
     <div id="userInfo" class="hidden"></div>
@@ -283,8 +306,14 @@
       🔗 Connect Wallet
     </button>
     <button id="submitBtn" class="primary-btn hidden" style="margin-top: 12px;">Submit Quiz</button>
+    
     <div id="status"></div>
     <div id="walletStatus" class="wallet-status"></div>
+
+    <div class="footer">
+      Built on <a href="https://celo.org" target="_blank">Celo</a> • 
+      <a href="https://warpcast.com" target="_blank">Farcaster Mini App</a>
+    </div>
   </div>
 
   <script type="module">
@@ -295,30 +324,49 @@
     const CONTRACT_ADDRESS = "0x6a31E0ac5184A1263812abd764E8813A79AEE8cF"; // Celo NFT Contract
     const CONTRACT_ABI = [
       {
-        "inputs": [
-          { "internalType": "address", "name": "to", "type": "address" },
-          { "internalType": "string", "name": "tokenURI", "type": "string" }
-        ],
-        "name": "mint",
-        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "inputs": [{"internalType": "uint8", "name": "correctAnswers", "type": "uint8"}],
+        "name": "claimNFTs",
+        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
+      },
+      {
+        "inputs": [{"internalType": "address", "name": "", "type": "address"}],
+        "name": "hasClaimed",
+        "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getAllTokenURIs",
+        "outputs": [{"internalType": "string[]", "name": "", "type": "string[]"}],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {"indexed": true, "internalType": "address", "name": "user", "type": "address"},
+          {"indexed": false, "internalType": "uint8", "name": "correctAnswers", "type": "uint8"},
+          {"indexed": false, "internalType": "uint256[]", "name": "tokenIds", "type": "uint256[]"}
+        ],
+        "name": "NFTsClaimed",
+        "type": "event"
       }
     ];
-    const NFT_URIS = [
-      "ipfs://QmYourNFT1Hash",
-      "ipfs://QmYourNFT2Hash", 
-      "ipfs://QmYourNFT3Hash"
-    ];
+    
+    // 👇 Note: Token URIs are managed by the contract
+    // The contract will assign NFTs based on correctAnswers count
 
-    // Celo Mainnet Chain ID
+    // Celo Mainnet Configuration
     const CELO_CHAIN_ID = "0xa4ec"; // 42220 in hex
     const CELO_RPC = "https://forno.celo.org";
 
     const questions = [
       {
         q: "What type of blockchain is Celo?",
-        options: ["Bitcoin", "EVM-compatible", "Solana", "Cardano"],
+        options: ["Bitcoin Fork", "EVM-compatible", "Solana-based", "Cardano"],
         answer: "EVM-compatible"
       },
       {
@@ -328,7 +376,7 @@
       },
       {
         q: "Can you mint NFTs on Celo?",
-        options: ["Yes", "No"],
+        options: ["Yes", "No", "Only with permission", "Not yet"],
         answer: "Yes"
       }
     ];
@@ -340,32 +388,22 @@
     let isFarcasterContext = false;
     let currentQuestion = 0;
 
-    // Wait for Farcaster SDK to load
+    // Initialize Farcaster SDK
     async function initFarcasterSdk() {
       try {
-        // Signal that app is ready
         await sdk.actions.ready();
-        
-        // Get user context
         farcasterContext = sdk.context;
-        
-        // Get Ethereum provider
         ethereumProvider = sdk.wallet.getEthereumProvider();
-        
         isFarcasterContext = true;
         
-        // Display user info
         displayUserInfo();
-        
-        // Check if app is added and show banner if not
         checkAddedStatus();
         
-        console.log('Farcaster SDK initialized successfully');
-        
+        console.log('✅ Farcaster SDK initialized');
       } catch (error) {
-        console.log('Not running in Farcaster context:', error);
+        console.log('ℹ️ Running in standalone mode');
         isFarcasterContext = false;
-        showStatus('💡 Connect your wallet to mint NFT', 'info');
+        showStatus('💡 Connect your wallet to mint NFTs', 'info');
       }
     }
 
@@ -398,7 +436,7 @@
           <div class="add-favorite-banner">
             <h3>⭐ Add to Favorites!</h3>
             <p>Save this app for quick access and mint more NFTs anytime!</p>
-            <button class="secondary-btn" onclick="addToFavorites()">
+            <button class="secondary-btn" onclick="window.addToFavorites()">
               Add to My Apps
             </button>
           </div>
@@ -407,42 +445,38 @@
       }
     }
 
-    async function addToFavorites() {
+    window.addToFavorites = async function() {
       try {
         await sdk.actions.addMiniApp();
         showStatus('✅ App added to favorites!', 'success');
         document.getElementById('addFavoriteBanner').classList.add('hidden');
       } catch (error) {
         console.error('Error adding to favorites:', error);
-        showStatus('Unable to add to favorites. Make sure you\'re on the production domain.', 'error');
+        showStatus('⚠️ Unable to add to favorites. This only works on the production domain.', 'error');
       }
-    }
+    };
 
     function loadQuiz() {
       showQuestion(currentQuestion);
       
-      // Show connect wallet button if not in Farcaster context
       if (!isFarcasterContext) {
         const connectBtn = document.getElementById('connectWalletBtn');
         connectBtn.classList.remove('hidden');
       }
       
-      console.log('Quiz loaded successfully');
+      console.log('✅ Quiz loaded');
     }
 
     function showQuestion(index) {
       const quizSection = document.getElementById('quizSection');
       const q = questions[index];
       
-      // Update progress bar
       const progress = ((index + 1) / questions.length) * 100;
       document.getElementById('progressFill').style.width = progress + '%';
       
-      // Update counter
       document.getElementById('questionCounter').textContent = 
         `Question ${index + 1} of ${questions.length}`;
       
-      // Build question HTML
       let optionsHtml = '<div class="options">';
       q.options.forEach(opt => {
         const isSelected = userAnswers[index] === opt;
@@ -463,24 +497,20 @@
         </div>
       `;
       
-      // Add event listeners to options
       document.querySelectorAll('.option-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           const questionIndex = parseInt(this.dataset.question);
           const answer = this.dataset.answer;
           
-          // Remove selected class from siblings
           this.parentElement.querySelectorAll('.option-btn').forEach(b => {
             b.classList.remove('selected');
           });
           
-          // Add selected class to clicked button
           this.classList.add('selected');
           userAnswers[questionIndex] = answer;
         });
       });
       
-      // Update navigation buttons
       updateNavigationButtons();
     }
 
@@ -489,16 +519,12 @@
       const nextBtn = document.getElementById('nextBtn');
       const submitBtn = document.getElementById('submitBtn');
       
-      // Update Previous button
       prevBtn.disabled = currentQuestion === 0;
       
-      // Update Next/Submit button
       if (currentQuestion === questions.length - 1) {
-        // Last question - show submit button, hide next
         nextBtn.classList.add('hidden');
         submitBtn.classList.remove('hidden');
       } else {
-        // Not last question - show next button, hide submit
         nextBtn.classList.remove('hidden');
         submitBtn.classList.add('hidden');
       }
@@ -526,7 +552,6 @@
         return;
       }
       
-      // Count correct answers
       let correctCount = 0;
       questions.forEach((q, i) => {
         if (userAnswers[i] === q.answer) {
@@ -539,11 +564,9 @@
         return;
       }
       
-      // Show results
       const resultMsg = `🎉 You got ${correctCount} out of ${questions.length} correct!`;
-      showStatus(resultMsg + ' Minting your NFT(s)...', 'success');
+      showStatus(resultMsg + ' Claiming your NFT(s)...', 'success');
       
-      // Mint NFTs based on correct answers
       await mintNFTs(correctCount);
     }
 
@@ -573,35 +596,28 @@
     async function mintNFTs(correctCount) {
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
-      submitBtn.innerHTML = 'Minting... <div class="loading"></div>';
+      submitBtn.innerHTML = 'Claiming... <div class="loading"></div>';
       
       try {
         let provider, signer;
         
-        // Try Farcaster wallet first, fallback to external wallet
         if (ethereumProvider) {
           showWalletStatus('Using Farcaster Wallet...');
           provider = new ethers.BrowserProvider(ethereumProvider);
           
-          // Switch to Celo network
           try {
             await ethereumProvider.request({
               method: 'wallet_switchEthereumChain',
               params: [{ chainId: CELO_CHAIN_ID }],
             });
           } catch (switchError) {
-            // Chain not added, try to add it
             if (switchError.code === 4902) {
               await ethereumProvider.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
                   chainId: CELO_CHAIN_ID,
                   chainName: 'Celo Mainnet',
-                  nativeCurrency: {
-                    name: 'CELO',
-                    symbol: 'CELO',
-                    decimals: 18
-                  },
+                  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
                   rpcUrls: [CELO_RPC],
                   blockExplorerUrls: ['https://explorer.celo.org']
                 }]
@@ -616,7 +632,6 @@
           await window.ethereum.request({ method: 'eth_requestAccounts' });
           provider = new ethers.BrowserProvider(window.ethereum);
           
-          // Switch to Celo
           try {
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
@@ -629,11 +644,7 @@
                 params: [{
                   chainId: CELO_CHAIN_ID,
                   chainName: 'Celo Mainnet',
-                  nativeCurrency: {
-                    name: 'CELO',
-                    symbol: 'CELO',
-                    decimals: 18
-                  },
+                  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
                   rpcUrls: [CELO_RPC],
                   blockExplorerUrls: ['https://explorer.celo.org']
                 }]
@@ -650,64 +661,64 @@
         const userAddress = await signer.getAddress();
         showWalletStatus(`Connected: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`);
         
-        // Create contract instance
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
-        // Mint NFTs based on correct answers
-        const nftsToMint = correctCount; // 1 correct = 1 NFT, 2 correct = 2 NFTs, 3 correct = 3 NFTs
-        let mintedCount = 0;
-        let failedCount = 0;
+        // Check if user has already claimed
+        try {
+          const alreadyClaimed = await contract.hasClaimed(userAddress);
+          if (alreadyClaimed) {
+            showStatus('⚠️ You have already claimed NFTs from this contract!', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Submit Quiz';
+            return;
+          }
+        } catch (error) {
+          console.log('Could not check claim status:', error);
+        }
         
-        showStatus(`📝 Minting ${nftsToMint} NFT${nftsToMint > 1 ? 's' : ''}... Please confirm transactions in your wallet.`, 'info');
+        showStatus(`📝 Claiming ${correctCount} NFT${correctCount > 1 ? 's' : ''}... Please confirm the transaction.`, 'info');
         
-        for (let i = 0; i < nftsToMint; i++) {
+        // Call claimNFTs with the number of correct answers
+        const tx = await contract.claimNFTs(correctCount);
+        showStatus(`⏳ Transaction submitted! Waiting for confirmation...`, 'info');
+        
+        const receipt = await tx.wait();
+        
+        // Parse the NFTsClaimed event to get token IDs
+        let tokenIds = [];
+        for (const log of receipt.logs) {
           try {
-            const nftURI = NFT_URIS[i]; // Use NFTs in order based on correctness
-            
-            showStatus(`⏳ Minting NFT ${i + 1} of ${nftsToMint}... Please confirm.`, 'info');
-            
-            const tx = await contract.mint(userAddress, nftURI);
-            showStatus(`⏳ Transaction ${i + 1} submitted! Waiting for confirmation...`, 'info');
-            
-            await tx.wait();
-            mintedCount++;
-            
-            showStatus(`✅ NFT ${i + 1} of ${nftsToMint} minted successfully!`, 'success');
-            
-            // Small delay between mints
-            if (i < nftsToMint - 1) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
+            const parsedLog = contract.interface.parseLog(log);
+            if (parsedLog && parsedLog.name === 'NFTsClaimed') {
+              tokenIds = parsedLog.args.tokenIds.map(id => id.toString());
+              break;
             }
-            
-          } catch (error) {
-            console.error(`Error minting NFT ${i + 1}:`, error);
-            failedCount++;
-            
-            if (error.code === 4001) {
-              showStatus(`❌ Transaction ${i + 1} rejected by user.`, 'error');
-              break; // Stop if user rejects
-            }
+          } catch (e) {
+            // Skip logs that can't be parsed
           }
         }
         
-        // Final status
-        if (mintedCount === nftsToMint) {
-          showStatus(`🎉 All ${mintedCount} NFT${mintedCount > 1 ? 's' : ''} minted successfully! Check your wallet on Celo Explorer.`, 'success');
-          await sendSuccessNotification(mintedCount);
-        } else if (mintedCount > 0) {
-          showStatus(`✅ ${mintedCount} of ${nftsToMint} NFT${mintedCount > 1 ? 's' : ''} minted. ${failedCount} failed.`, 'info');
+        if (tokenIds.length > 0) {
+          showStatus(`🎉 Successfully claimed ${tokenIds.length} NFT${tokenIds.length > 1 ? 's' : ''}! Token IDs: ${tokenIds.join(', ')}`, 'success');
         } else {
-          showStatus(`❌ Failed to mint NFTs. Please try again.`, 'error');
+          showStatus(`🎉 Successfully claimed ${correctCount} NFT${correctCount > 1 ? 's' : ''}! Check your wallet.`, 'success');
         }
         
+        showWalletStatus(`✅ View on Explorer: https://explorer.celo.org/tx/${receipt.hash}`);
+        await sendSuccessNotification(correctCount);
+        
       } catch (error) {
-        console.error('Mint error:', error);
-        let errorMsg = 'Mint failed! ';
+        console.error('Claim error:', error);
+        let errorMsg = 'Claim failed! ';
         
         if (error.code === 4001) {
           errorMsg += 'Transaction rejected by user.';
         } else if (error.message.includes('insufficient funds')) {
           errorMsg += 'Insufficient CELO for gas.';
+        } else if (error.message.includes('already claimed')) {
+          errorMsg += 'You have already claimed NFTs!';
+        } else if (error.message.includes('Invalid number')) {
+          errorMsg += 'Invalid number of correct answers.';
         } else {
           errorMsg += error.message || 'Unknown error';
         }
@@ -722,10 +733,7 @@
     async function sendSuccessNotification(nftCount) {
       try {
         if (!farcasterContext?.client?.notificationDetails) return;
-        
-        // Note: In production, you would call your backend API here
-        // to send the notification using the token from notificationDetails
-        console.log(`Notification would be sent: ${nftCount} NFT(s) minted!`, farcasterContext.client.notificationDetails);
+        console.log(`📬 Notification: ${nftCount} NFT(s) minted!`, farcasterContext.client.notificationDetails);
       } catch (error) {
         console.error('Notification error:', error);
       }
@@ -759,7 +767,7 @@
       try {
         await initFarcasterSdk();
       } catch (error) {
-        console.log('Farcaster SDK not available, using standalone mode');
+        console.log('Running in standalone mode');
       }
       loadQuiz();
     })();
