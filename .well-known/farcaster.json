@@ -18,5 +18,10 @@
       "free"
     ],
     "tagline": "CeloNFT"
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE4MzAxLCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4QTIzMjRiZmY0NTE0QkVmMTA5RmY5ZGNDZTg0ZTA2RDg3MjI2NzNGYyJ9",
+    "payload": "eyJkb21haW4iOiJjZWxvLW5mdC1taW50LnZlcmNlbC5hcHAifQ",
+    "signature": "MHg0MGU5NTk5NmQwYmZjMzA1ODZjMjNiYWRiNGJkNWQzNmFlYzQxMTU1MjFkOTE5MzA1MmU2ZWM1YTMzZDkyMjk0NmRmZDk3NTNjYjA1N2JhZjNhMzg0YzIwMzk4ZTJlZmY0NjJlODExMzZiMWRhZjIwZDY4OGI0YjQxOTMzNDUxNzFj"
   }
 }
