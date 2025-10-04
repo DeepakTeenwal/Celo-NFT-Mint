@@ -292,7 +292,7 @@
     import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
     
     // ===== CONFIGURATION =====
-    const CONTRACT_ADDRESS = "0xYourCeloContractAddress"; // 👈 Replace with your deployed contract
+    const CONTRACT_ADDRESS = "0x6a31E0ac5184A1263812abd764E8813A79AEE8cF"; // Celo NFT Contract
     const CONTRACT_ABI = [
       {
         "inputs": [
@@ -526,14 +526,25 @@
         return;
       }
       
-      const allCorrect = questions.every((q, i) => userAnswers[i] === q.answer);
+      // Count correct answers
+      let correctCount = 0;
+      questions.forEach((q, i) => {
+        if (userAnswers[i] === q.answer) {
+          correctCount++;
+        }
+      });
       
-      if (allCorrect) {
-        showStatus('✅ All correct! Minting your NFT...', 'success');
-        await mintNFT();
-      } else {
-        showStatus('❌ Some answers are wrong. Try again!', 'error');
+      if (correctCount === 0) {
+        showStatus('❌ No correct answers. Please try again!', 'error');
+        return;
       }
+      
+      // Show results
+      const resultMsg = `🎉 You got ${correctCount} out of ${questions.length} correct!`;
+      showStatus(resultMsg + ' Minting your NFT(s)...', 'success');
+      
+      // Mint NFTs based on correct answers
+      await mintNFTs(correctCount);
     }
 
     async function connectExternalWallet() {
@@ -559,7 +570,7 @@
       }
     }
 
-    async function mintNFT() {
+    async function mintNFTs(correctCount) {
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
       submitBtn.innerHTML = 'Minting... <div class="loading"></div>';
@@ -642,21 +653,52 @@
         // Create contract instance
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
-        // Select random NFT URI
-        const randomURI = NFT_URIS[Math.floor(Math.random() * NFT_URIS.length)];
+        // Mint NFTs based on correct answers
+        const nftsToMint = correctCount; // 1 correct = 1 NFT, 2 correct = 2 NFTs, 3 correct = 3 NFTs
+        let mintedCount = 0;
+        let failedCount = 0;
         
-        showStatus('📝 Please confirm the transaction in your wallet...', 'info');
+        showStatus(`📝 Minting ${nftsToMint} NFT${nftsToMint > 1 ? 's' : ''}... Please confirm transactions in your wallet.`, 'info');
         
-        // Mint NFT
-        const tx = await contract.mint(userAddress, randomURI);
-        showStatus('⏳ Transaction submitted! Waiting for confirmation...', 'info');
+        for (let i = 0; i < nftsToMint; i++) {
+          try {
+            const nftURI = NFT_URIS[i]; // Use NFTs in order based on correctness
+            
+            showStatus(`⏳ Minting NFT ${i + 1} of ${nftsToMint}... Please confirm.`, 'info');
+            
+            const tx = await contract.mint(userAddress, nftURI);
+            showStatus(`⏳ Transaction ${i + 1} submitted! Waiting for confirmation...`, 'info');
+            
+            await tx.wait();
+            mintedCount++;
+            
+            showStatus(`✅ NFT ${i + 1} of ${nftsToMint} minted successfully!`, 'success');
+            
+            // Small delay between mints
+            if (i < nftsToMint - 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+          } catch (error) {
+            console.error(`Error minting NFT ${i + 1}:`, error);
+            failedCount++;
+            
+            if (error.code === 4001) {
+              showStatus(`❌ Transaction ${i + 1} rejected by user.`, 'error');
+              break; // Stop if user rejects
+            }
+          }
+        }
         
-        await tx.wait();
-        
-        showStatus('🎉 NFT Minted Successfully! Check your wallet on Celo.', 'success');
-        
-        // Send notification if enabled
-        await sendSuccessNotification();
+        // Final status
+        if (mintedCount === nftsToMint) {
+          showStatus(`🎉 All ${mintedCount} NFT${mintedCount > 1 ? 's' : ''} minted successfully! Check your wallet on Celo Explorer.`, 'success');
+          await sendSuccessNotification(mintedCount);
+        } else if (mintedCount > 0) {
+          showStatus(`✅ ${mintedCount} of ${nftsToMint} NFT${mintedCount > 1 ? 's' : ''} minted. ${failedCount} failed.`, 'info');
+        } else {
+          showStatus(`❌ Failed to mint NFTs. Please try again.`, 'error');
+        }
         
       } catch (error) {
         console.error('Mint error:', error);
@@ -677,13 +719,13 @@
       }
     }
 
-    async function sendSuccessNotification() {
+    async function sendSuccessNotification(nftCount) {
       try {
         if (!farcasterContext?.client?.notificationDetails) return;
         
         // Note: In production, you would call your backend API here
         // to send the notification using the token from notificationDetails
-        console.log('Notification would be sent to:', farcasterContext.client.notificationDetails);
+        console.log(`Notification would be sent: ${nftCount} NFT(s) minted!`, farcasterContext.client.notificationDetails);
       } catch (error) {
         console.error('Notification error:', error);
       }
