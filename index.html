@@ -78,6 +78,22 @@
       font-weight: 600;
       color: #333;
     }
+    .wallet-connect-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+    .wallet-connect-section h3 {
+      margin-bottom: 12px;
+      font-size: 18px;
+    }
+    .wallet-connect-section p {
+      font-size: 14px;
+      margin-bottom: 16px;
+      opacity: 0.95;
+    }
     .add-favorite-banner {
       background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
       color: white;
@@ -290,22 +306,31 @@
     <div id="userInfo" class="hidden"></div>
     <div id="addFavoriteBanner" class="hidden"></div>
     
-    <div class="progress-bar">
-      <div id="progressFill" class="progress-fill" style="width: 33.33%"></div>
+    <!-- Wallet Connection Section -->
+    <div id="walletConnectSection" class="wallet-connect-section hidden">
+      <h3>🔗 Connect Your Wallet</h3>
+      <p>Connect your wallet to start the quiz and mint NFTs!</p>
+      <button id="connectWalletBtn" class="secondary-btn">
+        Connect Wallet
+      </button>
     </div>
-    <div id="questionCounter" class="question-counter">Question 1 of 3</div>
-    
-    <div id="quizSection" class="quiz-section"></div>
-    
-    <div class="nav-buttons">
-      <button id="prevBtn" class="nav-btn" disabled>← Previous</button>
-      <button id="nextBtn" class="nav-btn next">Next →</button>
+
+    <!-- Quiz Section -->
+    <div id="quizContainer" class="hidden">
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill" style="width: 33.33%"></div>
+      </div>
+      <div id="questionCounter" class="question-counter">Question 1 of 3</div>
+      
+      <div id="quizSection" class="quiz-section"></div>
+      
+      <div class="nav-buttons">
+        <button id="prevBtn" class="nav-btn" disabled>← Previous</button>
+        <button id="nextBtn" class="nav-btn next">Next →</button>
+      </div>
+      
+      <button id="submitBtn" class="primary-btn hidden" style="margin-top: 12px;">Submit Quiz</button>
     </div>
-    
-    <button id="connectWalletBtn" class="secondary-btn hidden" style="margin-top: 12px;">
-      🔗 Connect Wallet
-    </button>
-    <button id="submitBtn" class="primary-btn hidden" style="margin-top: 12px;">Submit Quiz</button>
     
     <div id="status"></div>
     <div id="walletStatus" class="wallet-status"></div>
@@ -317,10 +342,8 @@
   </div>
 
   <script type="module">
-    // Import Farcaster SDK
     import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
     
-    // ===== CONFIGURATION =====
     const CONTRACT_ADDRESS = "0x6a31E0ac5184A1263812abd764E8813A79AEE8cF";
     const CONTRACT_ABI = [
       {
@@ -379,25 +402,35 @@
 
     let userAnswers = {};
     let farcasterContext = null;
-    let ethereumProvider = null;
+    let provider = null;
+    let walletAddress = null;
     let isFarcasterContext = false;
     let currentQuestion = 0;
 
-    async function initFarcasterSdk() {
+    async function initApp() {
       try {
         await sdk.actions.ready();
         farcasterContext = sdk.context;
-        ethereumProvider = sdk.wallet.getEthereumProvider();
         isFarcasterContext = true;
         
         displayUserInfo();
         checkAddedStatus();
         
         console.log('✅ Farcaster SDK initialized');
+        
+        // Show wallet connect section
+        document.getElementById('walletConnectSection').classList.remove('hidden');
+        
       } catch (error) {
         console.log('ℹ️ Running in standalone mode');
         isFarcasterContext = false;
-        showStatus('💡 Connect your wallet to mint NFTs', 'info');
+        
+        // For standalone mode, show connect button if MetaMask available
+        if (window.ethereum) {
+          document.getElementById('walletConnectSection').classList.remove('hidden');
+        } else {
+          showStatus('⚠️ Please open this app in Farcaster or use a Web3 browser', 'error');
+        }
       }
     }
 
@@ -446,19 +479,90 @@
         document.getElementById('addFavoriteBanner').classList.add('hidden');
       } catch (error) {
         console.error('Error adding to favorites:', error);
-        showStatus('⚠️ Unable to add to favorites. This only works on the production domain.', 'error');
+        showStatus('⚠️ Unable to add to favorites', 'error');
       }
     };
 
+    async function connectWallet() {
+      const connectBtn = document.getElementById('connectWalletBtn');
+      connectBtn.disabled = true;
+      connectBtn.innerHTML = 'Connecting... <div class="loading"></div>';
+      
+      try {
+        let ethProvider;
+        
+        // Try Farcaster wallet first
+        if (isFarcasterContext) {
+          try {
+            ethProvider = sdk.wallet.getEthereumProvider();
+            console.log('Using Farcaster wallet provider');
+          } catch (error) {
+            console.error('Error getting Farcaster provider:', error);
+          }
+        }
+        
+        // Fallback to window.ethereum if no Farcaster provider
+        if (!ethProvider && window.ethereum) {
+          ethProvider = window.ethereum;
+          console.log('Using external wallet (MetaMask/etc)');
+        }
+        
+        if (!ethProvider) {
+          throw new Error('No wallet provider available');
+        }
+        
+        // Create ethers provider
+        provider = new ethers.BrowserProvider(ethProvider);
+        
+        // Request accounts
+        const accounts = await ethProvider.request({ 
+          method: 'eth_requestAccounts' 
+        });
+        
+        walletAddress = accounts[0];
+        showWalletStatus(`Connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`);
+        
+        // Switch to Celo network
+        try {
+          await ethProvider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: CELO_CHAIN_ID }],
+          });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            await ethProvider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: CELO_CHAIN_ID,
+                chainName: 'Celo Mainnet',
+                nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+                rpcUrls: [CELO_RPC],
+                blockExplorerUrls: ['https://explorer.celo.org']
+              }]
+            });
+          } else {
+            throw switchError;
+          }
+        }
+        
+        showStatus('✅ Wallet connected! Start the quiz below.', 'success');
+        
+        // Hide wallet connect section, show quiz
+        document.getElementById('walletConnectSection').classList.add('hidden');
+        document.getElementById('quizContainer').classList.remove('hidden');
+        
+        loadQuiz();
+        
+      } catch (error) {
+        console.error('Wallet connection error:', error);
+        showStatus('⚠️ Failed to connect wallet: ' + (error.message || 'Unknown error'), 'error');
+        connectBtn.disabled = false;
+        connectBtn.innerHTML = 'Connect Wallet';
+      }
+    }
+
     function loadQuiz() {
       showQuestion(currentQuestion);
-      
-      // Only show connect button if NOT in Farcaster AND MetaMask is available
-      if (!isFarcasterContext && window.ethereum) {
-        const connectBtn = document.getElementById('connectWalletBtn');
-        connectBtn.classList.remove('hidden');
-      }
-      
       console.log('✅ Quiz loaded');
     }
 
@@ -565,107 +669,21 @@
       await mintNFTs(correctCount);
     }
 
-    async function connectExternalWallet() {
-      try {
-        if (!window.ethereum) {
-          showStatus('⚠️ Please install MetaMask or another Web3 wallet', 'error');
-          return;
-        }
-        
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const address = await signer.getAddress();
-        
-        showWalletStatus(`✅ Connected: ${address.slice(0, 6)}...${address.slice(-4)}`);
-        showStatus('🎉 Wallet connected! Complete the quiz to mint.', 'success');
-        
-        document.getElementById('connectWalletBtn').textContent = '✅ Wallet Connected';
-        document.getElementById('connectWalletBtn').disabled = true;
-      } catch (error) {
-        console.error('Wallet connection error:', error);
-        showStatus('⚠️ Failed to connect wallet', 'error');
-      }
-    }
-
     async function mintNFTs(correctCount) {
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
       submitBtn.innerHTML = 'Claiming... <div class="loading"></div>';
       
       try {
-        let provider, signer;
-        
-        // Priority 1: Use Farcaster wallet if available
-        if (ethereumProvider) {
-          showWalletStatus('Using Farcaster Wallet...');
-          provider = new ethers.BrowserProvider(ethereumProvider);
-          
-          try {
-            await ethereumProvider.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: CELO_CHAIN_ID }],
-            });
-          } catch (switchError) {
-            if (switchError.code === 4902) {
-              await ethereumProvider.request({
-                method: 'wallet_addEthereumChain',
-                params: [{
-                  chainId: CELO_CHAIN_ID,
-                  chainName: 'Celo Mainnet',
-                  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-                  rpcUrls: [CELO_RPC],
-                  blockExplorerUrls: ['https://explorer.celo.org']
-                }]
-              });
-            } else {
-              throw switchError;
-            }
-          }
-          
-        // Priority 2: Use external wallet if available
-        } else if (window.ethereum) {
-          showWalletStatus('Connecting your wallet...');
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          provider = new ethers.BrowserProvider(window.ethereum);
-          
-          try {
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: CELO_CHAIN_ID }],
-            });
-          } catch (switchError) {
-            if (switchError.code === 4902) {
-              await window.ethereum.request({
-                method: 'wallet_addEthereumChain',
-                params: [{
-                  chainId: CELO_CHAIN_ID,
-                  chainName: 'Celo Mainnet',
-                  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-                  rpcUrls: [CELO_RPC],
-                  blockExplorerUrls: ['https://explorer.celo.org']
-                }]
-              });
-            } else {
-              throw switchError;
-            }
-          }
-        // No wallet available
-        } else {
-          showStatus('⚠️ No wallet detected. Please open this app in Farcaster or use a Web3 browser.', 'error');
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = 'Submit Quiz';
-          return;
+        if (!provider || !walletAddress) {
+          throw new Error('Wallet not connected');
         }
         
-        signer = await provider.getSigner();
-        const userAddress = await signer.getAddress();
-        showWalletStatus(`Connected: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`);
-        
+        const signer = await provider.getSigner();
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
         try {
-          const alreadyClaimed = await contract.hasClaimed(userAddress);
+          const alreadyClaimed = await contract.hasClaimed(walletAddress);
           if (alreadyClaimed) {
             showStatus('⚠️ You have already claimed NFTs from this contract!', 'error');
             submitBtn.disabled = false;
@@ -749,24 +767,13 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
       document.getElementById('submitBtn').addEventListener('click', checkAnswers);
       document.getElementById('nextBtn').addEventListener('click', nextQuestion);
       document.getElementById('prevBtn').addEventListener('click', prevQuestion);
-      
-      const connectBtn = document.getElementById('connectWalletBtn');
-      if (connectBtn) {
-        connectBtn.addEventListener('click', connectExternalWallet);
-      }
     });
     
-    (async () => {
-      try {
-        await initFarcasterSdk();
-      } catch (error) {
-        console.log('Running in standalone mode');
-      }
-      loadQuiz();
-    })();
+    initApp();
   </script>
 </body>
 </html>
