@@ -1,20 +1,22 @@
 {
   "frame": {
-    "name": "WrapItUp",
+    "name": "Celo Nft Mint",
     "version": "1",
     "iconUrl": "https://celo-nft-mint.vercel.app/icon.png",
-    "homeUrl": "https://celo-nft-mint.vercel.app/",
+    "homeUrl": "https://celo-nft-mint.vercel.app",
     "imageUrl": "https://celo-nft-mint.vercel.app/image.png",
+    "buttonTitle": "CeloNFT ERC-721 on Celo",
     "splashImageUrl": "https://celo-nft-mint.vercel.app/splash.png",
-    "splashBackgroundColor": "#1B1B1E",
+    "splashBackgroundColor": "#ffff66",
     "webhookUrl": "https://celo-nft-mint.vercel.app/api/webhook",
-    "primaryCategory": "social",
-    "subtitle": "SafeSays",
-    "description": "Funny cheeky safe the best quotes about love laughter protection Wrap it up with words that matter"
-  },
-  "accountAssociation": {
-    "header":
-    "payload":
-    "signature": 
+    "primaryCategory": "art-creativity",
+    "subtitle": "Claim Your Unique Digital Collectible on Celo",
+    "description": "Mint your exclusive NFT on the Celo blockchain and join a community of collectors",
+    "tags": [
+      "celonft",
+      "mint",
+      "free"
+    ],
+    "tagline": "CeloNFT"
   }
 }
