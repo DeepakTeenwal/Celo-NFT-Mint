@@ -321,7 +321,7 @@
     import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
     
     // ===== CONFIGURATION =====
-    const CONTRACT_ADDRESS = "0x6a31E0ac5184A1263812abd764E8813A79AEE8cF"; // Celo NFT Contract
+    const CONTRACT_ADDRESS = "0x6a31E0ac5184A1263812abd764E8813A79AEE8cF";
     const CONTRACT_ABI = [
       {
         "inputs": [{"internalType": "uint8", "name": "correctAnswers", "type": "uint8"}],
@@ -355,12 +355,8 @@
         "type": "event"
       }
     ];
-    
-    // 👇 Note: Token URIs are managed by the contract
-    // The contract will assign NFTs based on correctAnswers count
 
-    // Celo Mainnet Configuration
-    const CELO_CHAIN_ID = "0xa4ec"; // 42220 in hex
+    const CELO_CHAIN_ID = "0xa4ec";
     const CELO_RPC = "https://forno.celo.org";
 
     const questions = [
@@ -381,14 +377,12 @@
       }
     ];
 
-    // State
     let userAnswers = {};
     let farcasterContext = null;
     let ethereumProvider = null;
     let isFarcasterContext = false;
     let currentQuestion = 0;
 
-    // Initialize Farcaster SDK
     async function initFarcasterSdk() {
       try {
         await sdk.actions.ready();
@@ -459,7 +453,8 @@
     function loadQuiz() {
       showQuestion(currentQuestion);
       
-      if (!isFarcasterContext) {
+      // Only show connect button if NOT in Farcaster AND MetaMask is available
+      if (!isFarcasterContext && window.ethereum) {
         const connectBtn = document.getElementById('connectWalletBtn');
         connectBtn.classList.remove('hidden');
       }
@@ -601,6 +596,7 @@
       try {
         let provider, signer;
         
+        // Priority 1: Use Farcaster wallet if available
         if (ethereumProvider) {
           showWalletStatus('Using Farcaster Wallet...');
           provider = new ethers.BrowserProvider(ethereumProvider);
@@ -627,8 +623,9 @@
             }
           }
           
+        // Priority 2: Use external wallet if available
         } else if (window.ethereum) {
-          showWalletStatus('Please connect your wallet...');
+          showWalletStatus('Connecting your wallet...');
           await window.ethereum.request({ method: 'eth_requestAccounts' });
           provider = new ethers.BrowserProvider(window.ethereum);
           
@@ -653,8 +650,12 @@
               throw switchError;
             }
           }
+        // No wallet available
         } else {
-          throw new Error('No wallet available');
+          showStatus('⚠️ No wallet detected. Please open this app in Farcaster or use a Web3 browser.', 'error');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Submit Quiz';
+          return;
         }
         
         signer = await provider.getSigner();
@@ -663,7 +664,6 @@
         
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
-        // Check if user has already claimed
         try {
           const alreadyClaimed = await contract.hasClaimed(userAddress);
           if (alreadyClaimed) {
@@ -678,13 +678,11 @@
         
         showStatus(`📝 Claiming ${correctCount} NFT${correctCount > 1 ? 's' : ''}... Please confirm the transaction.`, 'info');
         
-        // Call claimNFTs with the number of correct answers
         const tx = await contract.claimNFTs(correctCount);
         showStatus(`⏳ Transaction submitted! Waiting for confirmation...`, 'info');
         
         const receipt = await tx.wait();
         
-        // Parse the NFTsClaimed event to get token IDs
         let tokenIds = [];
         for (const log of receipt.logs) {
           try {
@@ -750,7 +748,6 @@
       walletStatus.textContent = message;
     }
 
-    // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('submitBtn').addEventListener('click', checkAnswers);
       document.getElementById('nextBtn').addEventListener('click', nextQuestion);
@@ -762,7 +759,6 @@
       }
     });
     
-    // Start the app
     (async () => {
       try {
         await initFarcasterSdk();
